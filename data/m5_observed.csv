@@ -1,0 +1,4 @@
+insert_length_bp,concentration_uM,time_min,success_rate,n_replicates,notes
+1039,0.387,30,0.875,3,anchor_point_1
+1605,0.387,30,0.790,3,anchor_point_2
+1613,0.387,30,0.800,3,anchor_point_3

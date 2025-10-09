@@ -1,0 +1,121 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from m5_tool import M5Model
+
+def plot_figure_1(model, output='fig1_PvsL.png'):
+    """Figure 1: P vs L (30 min, concentration sweep)"""
+    
+    L_range = np.linspace(0.5, 4.0, 100)
+    concentrations = [0.2, 0.3, 0.387, 0.5, 0.6, 1.0]
+    
+    plt.figure(figsize=(10, 6))
+    
+    for C in concentrations:
+        P = model.predict_mode_b(L_range, C=C, t=30)
+        label = f'{C} μM × 30 min'
+        if C > 0.8:
+            plt.plot(L_range, P, '--', label=label, alpha=0.7)
+        else:
+            plt.plot(L_range, P, '-', label=label, linewidth=2)
+    
+    # Add experimental anchor points
+    anchors = {
+        1.039: 0.875,
+        1.605: 0.790,
+        1.613: 0.800
+    }
+    
+    for L, P in anchors.items():
+        plt.scatter(L, P, s=100, c='black', zorder=5, marker='o')
+        plt.text(L, P+0.02, f'{int(L*1000)} bp', ha='center', fontsize=9)
+    
+    # Add P=0.8 threshold line
+    plt.axhline(y=0.8, color='red', linestyle='--', linewidth=1.5, 
+                label='SOP threshold (P=0.8)', alpha=0.7)
+    
+    plt.xlabel('Insert length (kb)', fontsize=12)
+    plt.ylabel('P_prod', fontsize=12)
+    plt.title('Production Mode (weak C): P vs L at t=30 min (C sweep)', fontsize=14)
+    plt.legend(loc='upper right', fontsize=10)
+    plt.grid(alpha=0.3)
+    plt.xlim(0.5, 4.0)
+    plt.ylim(0, 1.0)
+    
+    plt.tight_layout()
+    plt.savefig(output, dpi=300)
+    print(f"Saved: {output}")
+    plt.close()
+
+
+def plot_figure_2(model, output='fig2_heatmap.png'):
+    """Figure 2: L × C heatmap (30 min fixed)"""
+    
+    L_range = np.linspace(0.5, 4.0, 100)
+    C_range = np.linspace(0.1, 1.0, 100)
+    
+    L_grid, C_grid = np.meshgrid(L_range, C_range)
+    P_grid = np.zeros_like(L_grid)
+    
+    for i in range(len(C_range)):
+        for j in range(len(L_range)):
+            P_grid[i, j] = model.predict_mode_b(L_grid[i, j], C_grid[i, j], t=30)
+    
+    plt.figure(figsize=(10, 8))
+    
+    plt.contourf(C_grid, L_grid, P_grid, levels=20, cmap='viridis')
+    plt.colorbar(label='Predicted success probability')
+    
+    # Add C_ref line
+    plt.axvline(x=model.C_ref, color='white', linestyle='--', 
+                linewidth=2, label=f'C_ref = {model.C_ref} μM')
+    
+    # Add P=0.8 contour
+    plt.contour(C_grid, L_grid, P_grid, levels=[0.8], colors='red', 
+                linestyles='--', linewidths=2)
+    
+    plt.xlabel('Bxb1 concentration (μM)', fontsize=12)
+    plt.ylabel('Insert length (kb)', fontsize=12)
+    plt.title('Production Mode (weak C, ref-normalized): P_prod vs L & C (t=30 min)', 
+              fontsize=14)
+    plt.legend(fontsize=10)
+    
+    plt.tight_layout()
+    plt.savefig(output, dpi=300)
+    print(f"Saved: {output}")
+    plt.close()
+
+
+def main():
+    """Generate all figures"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Generate M5 figures')
+    parser.add_argument('--figure', type=int, default=0, 
+                        help='Figure number (0=all, 1-8=specific)')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output filename')
+    
+    args = parser.parse_args()
+    
+    model = M5Model.load_default()
+    
+    if args.figure == 0:
+        # Generate all figures
+        plot_figure_1(model, 'figures/fig1_PvsL.png')
+        plot_figure_2(model, 'figures/fig2_heatmap.png')
+        print("All figures generated!")
+        
+    elif args.figure == 1:
+        output = args.output or 'fig1_PvsL.png'
+        plot_figure_1(model, output)
+        
+    elif args.figure == 2:
+        output = args.output or 'fig2_heatmap.png'
+        plot_figure_2(model, output)
+        
+    else:
+        print(f"Figure {args.figure} not implemented yet")
+
+
+if __name__ == "__main__":
+    main()
